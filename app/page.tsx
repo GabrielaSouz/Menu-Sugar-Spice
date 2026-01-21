@@ -1,65 +1,155 @@
-import Image from "next/image";
+"use client"
+import { useState, useMemo, useEffect } from "react"
+import { toast } from "sonner"
+import ProductList from "@/components/ProductList"
+import PromotionBanner from "@/components/PromotionBanner"
+import { Hero } from "@/components/Hero/Hero"
+import AutoHideHeader from "@/components/AutoHideHeader"
+import Footer from "@/components/Footer"
+import type { EventProduct } from "@/types/event"
+import { Search, ChevronDown } from "lucide-react"
+
+interface CartItem {
+  product: EventProduct
+  quantity: number
+  selectedType?: { label: string; price: number }
+}
 
 export default function Home() {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [activeCategory, setActiveCategory] = useState("All Products")
+  const [products, setProducts] = useState<EventProduct[]>([])
+  const [categories, setCategories] = useState<string[]>(["All Products"])
+  const [loading, setLoading] = useState(true)
+
+  // Buscar produtos da API (mesma lógica do ProductList)
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch("/api/events")
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
+      }
+
+      const contentType = res.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Response is not JSON")
+      }
+
+      const data = await res.json()
+      
+      console.log("API Response - first 3 products:", data.slice(0, 3).map((p: EventProduct) => ({
+        title: p.title,
+        price: p.price,
+        sale: p.sale,
+        types: p.types,
+        variationCategories: p.variationCategories
+      })))
+      
+      if (Array.isArray(data)) {
+        setProducts(data)
+        // Extrair categorias dos produtos (mesma lógica do ProductList)
+        const uniqueCategories = ["All Products", ...new Set(data.map((e: EventProduct) => e.category).filter(Boolean))]
+        setCategories(uniqueCategories)
+      } else {
+        console.error("API response is not a list:", data)
+        setProducts([])
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err)
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  // Filtra produtos baseado na busca e categoria
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = activeCategory === "All Products" || product.category === activeCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [products, searchQuery, activeCategory])
+  const addToCart = (product: EventProduct) => {
+    const existingCart = localStorage.getItem("cart")
+    const cart: CartItem[] = existingCart ? JSON.parse(existingCart) : []
+
+    const existingItem = cart.find((item) => item.product.id === product.id)
+
+    if (existingItem) {
+      existingItem.quantity += 1
+    } else {
+      cart.push({ product, quantity: 1 })
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart))
+
+    // Dispatch custom event to update header cart count
+    window.dispatchEvent(new Event("cartUpdated"))
+
+    toast.success(`${product.title} added to cart!`)
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen">
+      <AutoHideHeader />
+      <Hero />
+      <PromotionBanner />
+
+      {/* Products Section with improved spacing */}
+      <section className="bg-stone-50 pt-24 pb-12 md:pb-16 lg:pb-20" id="products">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
+          <div className="flex justify-between items-center mb-8">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-rose-500 rounded-full" />
+              Explore the Menu
+            </h2>
+            <p className="text-slate-500">Freshly baked every single morning.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search flavors..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 pr-6 py-3 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 transition-all w-full sm:w-64"
+              />
+            </div>
+            <div className="relative inline-block text-left">
+              <select
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                className="appearance-none bg-white border border-slate-200 px-6 pr-12 py-3 rounded-2xl font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 transition-all cursor-pointer"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+            </div>
+          </div>
+          </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B4513]"></div>
+            </div>
+          ) : (
+            <ProductList products={filteredProducts} onAddToCart={addToCart} />
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </section>
+
+      <Footer />
     </div>
-  );
+  )
 }
