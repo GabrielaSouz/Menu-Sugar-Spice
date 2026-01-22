@@ -70,6 +70,14 @@ export async function PUT(
     const price = formData.get("price") as string
     const image = formData.get("image") as File | null
 
+    console.log('PUT - Dados recebidos:', { 
+      title, 
+      description, 
+      category, 
+      price, 
+      image: image ? `${image.name} (${image.size} bytes)` : null 
+    })
+
     let variationCategories = []
     const variationsRaw = formData.get("variationCategories")
     if (variationsRaw) {
@@ -86,13 +94,28 @@ export async function PUT(
     }
 
     if (image && image.size > 0) {
+      console.log('Iniciando upload da imagem:', image.name, image.size, 'bytes')
       const ext = image.name.split(".").pop()
       const filePath = `events/${crypto.randomUUID()}.${ext}`
+      console.log('Caminho do arquivo:', filePath)
 
-      await supabase.storage.from("upload").upload(filePath, image)
-      const { data } = supabase.storage.from("upload").getPublicUrl(filePath)
+      const { error: uploadError } = await supabase.storage
+        .from("upload")
+        .upload(filePath, image)
 
+      if (uploadError) {
+        console.error('Erro no upload:', uploadError)
+        throw uploadError
+      }
+
+      const { data } = supabase.storage
+        .from("upload")
+        .getPublicUrl(filePath)
+
+      console.log('Upload realizado. URL:', data.publicUrl)
       updateData.image = data.publicUrl
+    } else {
+      console.log('Nenhuma imagem enviada ou imagem vazia')
     }
 
     const { data, error } = await supabase

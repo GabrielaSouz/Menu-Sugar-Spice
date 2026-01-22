@@ -66,7 +66,7 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
       {/* Content Section - Flexible */}
       <div className="p-4 container mx-auto">
 
-          <div className="flex justify-between items-center mt-2">
+          <div className="flex flex-col mt-2">
             <h3 className="text-lg font-bold text-slate-800 leading-tight group-hover:text-rose-600 transition-colors">{product.title}</h3>
             <div className="flex flex-col">
               {!hasPrice ? (

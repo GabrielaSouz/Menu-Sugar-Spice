@@ -47,10 +47,12 @@ export default function Home() {
       })))
       
       if (Array.isArray(data)) {
+        console.log('Produtos recebidos da API:', data.length)
         setProducts(data)
         // Extrair categorias dos produtos (mesma lógica do ProductList)
         const uniqueCategories = ["All Products", ...new Set(data.map((e: EventProduct) => e.category).filter(Boolean))]
         setCategories(uniqueCategories)
+        console.log('Categorias extraídas:', uniqueCategories)
       } else {
         console.error("API response is not a list:", data)
         setProducts([])
@@ -70,13 +72,47 @@ export default function Home() {
 
   // Filtra produtos baseado na busca e categoria
   const filteredProducts = useMemo(() => {
+    // Se não há busca, filtra apenas por categoria
+    if (!searchQuery.trim()) {
+      return products.filter(product => {
+        const matchesCategory = activeCategory === "All Products" || product.category === activeCategory
+        return matchesCategory
+      })
+    }
+    
+    const searchLower = searchQuery.toLowerCase().trim()
+    
     return products.filter(product => {
-      const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      // Busca case insensitive em título, descrição e categoria
+      const productTitle = product.title.toLowerCase()
+      const productDesc = product.description.toLowerCase()
+      const productCategory = product.category.toLowerCase()
+      
+      // Busca exata ou parcial
+      const exactMatch = productTitle.includes(searchLower) ||
+                           productDesc.includes(searchLower) ||
+                           productCategory.includes(searchLower)
+      
+      // Busca por similaridade (fuzzy search)
+      const searchWords = searchLower.split(' ')
+      const titleWords = productTitle.split(' ')
+      const descWords = productDesc.split(' ')
+      const categoryWords = productCategory.split(' ')
+      
+      const hasPartialMatch = searchWords.some(searchWord => 
+        titleWords.some(titleWord => titleWord.includes(searchWord)) ||
+        descWords.some(descWord => descWord.includes(searchWord)) ||
+        categoryWords.some(categoryWord => categoryWord.includes(searchWord))
+      )
+      
+      const matchesSearch = exactMatch || hasPartialMatch
+      
       const matchesCategory = activeCategory === "All Products" || product.category === activeCategory
+      
       return matchesSearch && matchesCategory
     })
   }, [products, searchQuery, activeCategory])
+  
   const addToCart = (product: EventProduct) => {
     const existingCart = localStorage.getItem("cart")
     const cart: CartItem[] = existingCart ? JSON.parse(existingCart) : []
@@ -114,7 +150,7 @@ export default function Home() {
             </h2>
             <p className="text-slate-500">Freshly baked every single morning.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          {/* <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
@@ -137,7 +173,7 @@ export default function Home() {
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
             </div>
-          </div>
+          </div> */}
           </div>
           {loading ? (
             <div className="flex justify-center items-center py-12">
