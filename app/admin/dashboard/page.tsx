@@ -5,7 +5,8 @@ import { toast } from "sonner"
 import DashboardHeader from "./components/DashboardHeader"
 import ProductFormMain from "./components/ProductFormMain"
 import ProductsList from "./components/ProductsList"
-import DashboardPromotionForm from "./DashboardPromotionForm"
+import DashboardPromotionForm from "./components/DashboardPromotionForm"
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 interface Event {
   id: string
@@ -30,8 +31,8 @@ interface VariationCategory {
   options: Array<{ label: string; price: string }>
 }
 
-// Categorias iniciais atualizadas
-const initialCategories = ["Pasta", "Raviolli", "Sauces", "Gnocchi"]
+// Categorias serão extraídas dos produtos existentes
+const initialCategories: string[] = []
 
 export default function DashboardPage() {
   const [events, setEvents] = useState<Event[]>([])
@@ -57,6 +58,9 @@ export default function DashboardPage() {
       setCategories((prev) => [...prev, newCat])
       setFormData((prev: any) => ({ ...prev, category: newCat }))
       setNewCategory("")
+      toast.success(`Categoria "${newCat}" adicionada com sucesso!`)
+    } else if (newCat && categories.includes(newCat)) {
+      toast.error("Esta categoria já existe!")
     }
   }
 
@@ -66,6 +70,13 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json()
         setEvents(Array.isArray(data) ? data : [])
+        
+        // Extrai categorias únicas dos produtos existentes
+        if (Array.isArray(data)) {
+          const existingCategories = [...new Set(data.map(event => event.category).filter(Boolean))]
+          setCategories(existingCategories)
+          console.log('Categorias extraídas dos produtos:', existingCategories)
+        }
       }
     } catch (error) {
       console.error("Error fetching events:", error)
@@ -79,10 +90,24 @@ export default function DashboardPage() {
 
   const handleChange = (e: any) => {
     const { name, value, files } = e.target
-    setFormData({
-      ...formData,
-      [name]: files ? files[0] : value,
-    })
+    
+    // Se for arquivo de imagem, verifica se foi selecionado
+    if (name === 'image' && files) {
+      const file = files[0]
+      if (file && file instanceof File) {
+        console.log('Imagem selecionada:', file.name, file.size)
+        setFormData({
+          ...formData,
+          [name]: file,
+        })
+      }
+    } else {
+      // Para outros campos, mantém o comportamento normal
+      setFormData({
+        ...formData,
+        [name]: value,
+      })
+    }
   }
 
   // Funções para gerenciar categorias de variações
@@ -259,8 +284,9 @@ const handleEdit = (event: Event) => {
   }
 
   return (
-    <>
-      <DashboardHeader />
+    <ProtectedRoute>
+      <>
+        <DashboardHeader />
 
       {/* Container com melhor espaçamento para notebooks */}
       <div className="px-6 md:px-12 lg:px-16 xl:px-20 2xl:px-12 py-8 space-y-8 flex flex-col justify-center items-center bg-gray-50 min-h-screen">
@@ -293,6 +319,7 @@ const handleEdit = (event: Event) => {
 
         <ProductsList events={events} onEdit={handleEdit} onDelete={handleDelete} />
       </div>
-    </>
+      </>
+    </ProtectedRoute>
   )
 }
