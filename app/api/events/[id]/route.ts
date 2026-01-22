@@ -24,7 +24,7 @@ async function ensureBucketExists(bucketName: string) {
 // GET - Obter um evento específico
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   const { id } = params
   try {
@@ -57,7 +57,7 @@ export async function GET(
 // PUT - Atualizar um evento específico
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   const { id } = params
 
@@ -141,7 +141,7 @@ export async function PUT(
 // DELETE - Remover um evento específico
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   const { id } = params
 
