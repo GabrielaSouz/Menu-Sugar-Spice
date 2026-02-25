@@ -150,30 +150,7 @@ export default function Home() {
             </h2>
             <p className="text-slate-500">Freshly baked every single morning.</p>
           </div>
-          {/* <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search flavors..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 pr-6 py-3 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 transition-all w-full sm:w-64"
-              />
-            </div>
-            <div className="relative inline-block text-left">
-              <select
-                value={activeCategory}
-                onChange={(e) => setActiveCategory(e.target.value)}
-                className="appearance-none bg-white border border-slate-200 px-6 pr-12 py-3 rounded-2xl font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 transition-all cursor-pointer"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-            </div>
-          </div> */}
+        
           </div>
           {loading ? (
             <div className="flex justify-center items-center py-12">
