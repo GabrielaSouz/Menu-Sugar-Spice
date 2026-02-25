@@ -14,7 +14,7 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
   const imageUrl =
     typeof product.image === "string" &&
       product.image.trim() !== "" &&
-      (product.image.startsWith("http") || product.image.startsWith("https"))
+      (product.image.startsWith("http") || product.image.startsWith("https") || product.image.startsWith("/images/"))
       ? product.image
       : "/placeholder.svg"
 

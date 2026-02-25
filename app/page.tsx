@@ -140,7 +140,7 @@ export default function Home() {
       <PromotionBanner />
 
       {/* Products Section with improved spacing */}
-      <section className="bg-stone-50 pt-24 pb-12 md:pb-16 lg:pb-20" id="products">
+      <section className="bg-stone-50 pt-6 pb-12 md:pt-10 md:pb-12 lg:pt-16 lg:pb-20" id="products">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
           <div className="flex justify-between items-center mb-8">
           <div className="space-y-2">
@@ -180,7 +180,7 @@ export default function Home() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B4513]"></div>
             </div>
           ) : (
-            <ProductList products={filteredProducts} onAddToCart={addToCart} />
+            <ProductList onAddToCart={addToCart} />
           )}
         </div>
       </section>
