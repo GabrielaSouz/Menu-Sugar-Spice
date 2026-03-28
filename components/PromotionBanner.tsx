@@ -10,11 +10,18 @@ export default function PromotionBanner() {
     fetch("/api/promotions")
       .then((res) => res.json())
       .then((data) => {
-        const activePromos = data.filter((p: any) => p.active).map((p: any) => p.message)
-        setPromos(activePromos)
+        // Verificar se data é um array antes de usar filter
+        if (Array.isArray(data)) {
+          const activePromos = data.filter((p: any) => p.active).map((p: any) => p.message)
+          setPromos(activePromos)
+        } else {
+          console.warn("API promotions não retornou um array:", data)
+          setPromos([])
+        }
       })
       .catch((error) => {
         console.error("Error fetching promotions:", error)
+        setPromos([]) // Garantir array vazio em caso de erro
       })
   }, [])
 

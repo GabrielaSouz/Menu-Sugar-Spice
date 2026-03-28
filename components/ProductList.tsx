@@ -3,81 +3,39 @@
 import { useEffect, useState } from "react"
 import ProductCard from "./ProductCard"
 import type { EventProduct } from "@/types/event"
+import { useProducts } from "@/hooks/useProducts"
+import { ChevronDown } from "lucide-react"
 
 interface ProductListProps {
-  products: EventProduct[]
   onAddToCart: (product: EventProduct) => void
 }
 
-export default function ProductList({ products, onAddToCart }: ProductListProps) {
-  const [events, setEvents] = useState<EventProduct[]>([])
-  const [categories, setCategories] = useState<string[]>(["All Products"])
-  const [category, setCategory] = useState("All Products")
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export default function ProductList({ onAddToCart }: ProductListProps) {
+  const [category, setCategory] = useState("Todos")
+  const { products: events, loading, error, usingMock, refetch } = useProducts()
+  const [categories, setCategories] = useState<string[]>(["Todos"])
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
-  // Função para buscar produtos
-  const fetchEvents = async () => {
-    try {
-      const res = await fetch("/api/events")
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`)
-      }
-
-      const contentType = res.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Response is not JSON")
-      }
-
-      const data = await res.json()
-
-      if (Array.isArray(data)) {
-        setEvents(data)
-        // Extrair categorias dos produtos
-        const uniqueCategories = ["All Products", ...new Set(data.map((e: EventProduct) => e.category).filter(Boolean))]
-        setCategories(uniqueCategories)
-      } else {
-        console.error("API response is not a list:", data)
-        setEvents([])
-      }
-    } catch (err) {
-      console.error("Error fetching events:", err)
-      setError(err instanceof Error ? err.message : "Failed to fetch products")
-      setEvents([])
-    }
-  }
-
-  // Carregar dados iniciais
+  // Atualizar categorias quando os produtos mudam
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      setError(null)
-      await fetchEvents()
-      setLoading(false)
+    if (events.length > 0) {
+      const uniqueCategories = ["Todos", ...new Set(events.map((e) => e.category).filter(Boolean))]
+      setCategories(uniqueCategories)
     }
-    loadData()
-  }, [])
-
-  // Atualizar quando há mudanças externas (ex: novo produto criado)
-  useEffect(() => {
-    if (products && products.length > 0) {
-      fetchEvents()
-    }
-  }, [products])
+  }, [events])
 
   // Função para organizar produtos
   const getFilteredAndSortedEvents = () => {
-    let filteredEvents: EventProduct[]
+    let filteredEvents: EventProduct[] = events as EventProduct[]
 
-    if (category === "All Products") {
-      filteredEvents = events
+    if (category === "Todos") {
+      filteredEvents = events as EventProduct[]
     } else {
-      filteredEvents = events.filter((e) => e.category === category)
+      filteredEvents = (events as EventProduct[]).filter((e) => e.category === category)
     }
 
-    // Se "All Products" está selecionado, organizar por categoria
-    if (category === "All Products") {
+    // Se "Todos" está selecionado, organizar por categoria
+    if (category === "Todos") {
       // Primeiro, agrupar por categoria
       const groupedByCategory = filteredEvents.reduce(
         (acc, product) => {
@@ -136,11 +94,7 @@ export default function ProductList({ products, onAddToCart }: ProductListProps)
           <h3 className="text-red-800 font-semibold mb-2">Error Loading Products</h3>
           <p className="text-red-600 text-sm mb-4">{error}</p>
           <button
-            onClick={() => {
-              setError(null)
-              setLoading(true)
-              fetchEvents().finally(() => setLoading(false))
-            }}
+            onClick={() => refetch()}
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
           >
             Try Again
@@ -152,7 +106,53 @@ export default function ProductList({ products, onAddToCart }: ProductListProps)
 
   return (
     <div id="products" className="scroll-mt-20">
-      {/* Category Filter */}
+      {/* Category Filter - Mobile Dropdown */}
+      <div className="md:hidden mb-6">
+        <div className="relative">
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-rose-300 transition-colors"
+          >
+            <span className="font-medium text-slate-700">
+              {category}
+              <span className="ml-2 text-xs text-slate-500">
+                ({category === "Todos" ? events.length : events.filter((e) => e.category === category).length})
+              </span>
+            </span>
+            <ChevronDown 
+              className={`w-5 h-5 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 z-10 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setCategory(cat)
+                    setIsDropdownOpen(false)
+                  }}
+                  className={`w-full px-4 py-3 text-left hover:bg-rose-50 transition-colors border-b border-slate-100 last:border-b-0 ${
+                    cat === category
+                      ? "bg-rose-50 text-rose-600 font-medium"
+                      : "text-slate-600"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>{cat}</span>
+                    <span className="text-xs text-slate-500">
+                      ({cat === "Todos" ? events.length : events.filter((e) => e.category === cat).length})
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Category Filter - Desktop Buttons */}
       <div className="hidden md:flex gap-3 mb-10 overflow-x-auto pb-4 no-scrollbar">
         {categories.map((cat) => (
           <button
@@ -165,8 +165,8 @@ export default function ProductList({ products, onAddToCart }: ProductListProps)
             }`}
           >
             {cat}
-            {cat === "All Products" && <span className="ml-1 text-xs opacity-75">({events.length})</span>}
-            {cat !== "All Products" && (
+            {cat === "Todos" && <span className="ml-1 text-xs opacity-75">({events.length})</span>}
+            {cat !== "Todos" && (
               <span className="ml-1 text-xs opacity-75">({events.filter((e) => e.category === cat).length})</span>
             )}
           </button>
@@ -177,16 +177,16 @@ export default function ProductList({ products, onAddToCart }: ProductListProps)
       {filteredEvents.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">
-            {category === "All Products" ? "No products available" : `No products in "${category}" category`}
+            {category === "Todos" ? "No products available" : `No products in "${category}" category`}
           </p>
           <p className="text-gray-400 text-sm mt-2">
-            {category === "All Products" ? "Add some products in the dashboard" : "Try selecting a different category"}
+            {category === "Todos" ? "Add some products in the dashboard" : "Try selecting a different category"}
           </p>
         </div>
       ) : (
         <>
-          {/* Mostrar organização quando "All Products" estiver selecionado */}
-          {category === "All Products" && filteredEvents.length > 0 && (
+          {/* Mostrar organização quando "Todos" estiver selecionado */}
+          {category === "Todos" && filteredEvents.length > 0 && (
             <div className="mb-8 text-center">
               {/* <p className="text-sm text-gray-600">
                 📂 Products organized by category • {filteredEvents.length} total products
@@ -195,7 +195,7 @@ export default function ProductList({ products, onAddToCart }: ProductListProps)
           )}
 
           <div className="space-y-12">
-            {category === "All Products" ? (
+            {category === "Todos" ? (
               // Layout normal para todos os produtos juntos
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 auto-rows-fr">
                 {filteredEvents.map((product) => (
